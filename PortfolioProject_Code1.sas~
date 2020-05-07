@@ -1,0 +1,122 @@
+TITLE 'Data Summary';
+PROC MEANS DATA=WORK.IMPORT;
+	CLASS division;
+	VAR net_revenue shipment_qty;
+RUN;
+
+/* Use PROC SQL to generate a data subset so average values can be calculated
+   from the aggregated values of revenue and quantity */
+PROC SQL;
+  	CREATE TABLE sums AS
+  	SELECT
+  		division,
+  		count(*) as Records,
+  		sum(shipment_qty) as SumQTY,
+  		sum(shipment_qty)/count(*) as AvgQTY,
+  		sum(net_revenue) as SumREV,
+  		sum(net_revenue)/sum(shipment_qty) as AvgREV
+  	FROM WORK.IMPORT
+  	GROUP BY division;
+RUN;
+
+TITLE 'Detailed Data Summary';
+PROC MEANS DATA=sums;
+	CLASS division;
+	VAR Records SumQTY AvgQTY SumREV AvgREV;
+RUN;
+
+TITLE 'Community Solutions Graph';
+PROC SGPLOT DATA=WORK.IMPORT;
+	LABEL net_revenue="Revenue" shipment_qty="Quantity";
+	FORMAT net_revenue dollar15.2;
+	STYLEATTRS
+		backcolor=whitesmoke
+		datacolors=(bib);
+	BUBBLE x=net_revenue y=shipment_qty size=net_revenue;
+	WHERE division = 'Community Solutions';
+QUIT;
+
+TITLE 'Library Solutions Graph';
+PROC SGPLOT DATA=WORK.IMPORT;
+	LABEL net_revenue="Revenue" shipment_qty="Quantity";
+	FORMAT net_revenue dollar15.2;
+	STYLEATTRS
+		backcolor=whitesmoke
+		datacolors=(bib);
+	BUBBLE x=net_revenue y=shipment_qty size=net_revenue;
+	WHERE division = 'Library Solution';
+QUIT;
+
+PROC SQL;
+  	CREATE TABLE ANOVA1 AS
+  	SELECT
+  		sum(net_revenue) as SumREV,
+  		sum(shipment_qty) as SumQTY,
+  		CASE	
+  			WHEN HouseholdIncomeRange = '1-27,999' THEN 1
+  			WHEN HouseholdIncomeRange = '28,000-31,999' THEN 2
+  			WHEN HouseholdIncomeRange = '32,000-34,999' THEN 3
+  			WHEN HouseholdIncomeRange = '35,000-36,999' THEN 4
+  			WHEN HouseholdIncomeRange = '37,000-38,999' THEN 5
+  			WHEN HouseholdIncomeRange = '39,000-40,999' THEN 6
+  			WHEN HouseholdIncomeRange = '41,000-42,999' THEN 7
+  			WHEN HouseholdIncomeRange = '43,000-44,999' THEN 8
+  			WHEN HouseholdIncomeRange = '45,000-47,999' THEN 9
+  			WHEN HouseholdIncomeRange = '48,000-51,999' THEN 10
+  			WHEN HouseholdIncomeRange = '52,000-54,999' THEN 11
+  			WHEN HouseholdIncomeRange = '55,000-59,999' THEN 12
+  			WHEN HouseholdIncomeRange = '60,000-64,999' THEN 13
+  			WHEN HouseholdIncomeRange = '65,000-69,999' THEN 14
+  			WHEN HouseholdIncomeRange = '70,000-80,999' THEN 15
+  			WHEN HouseholdIncomeRange = '81,000-93,999' THEN 16
+  			WHEN HouseholdIncomeRange = '94,000 Plus' THEN 17
+  			ELSE -1
+  		END as HHIR
+  	FROM WORK.IMPORT
+  	WHERE division = 'Community Solutions'
+	GROUP BY HouseholdIncomeRange;
+
+TITLE1 'Two-Way ANOVA Test';
+TITLE2 'Community Solutions Consumer Segmentation';
+PROC GLM DATA=ANOVA1;
+CLASS SumREV SumQTY;
+	MODEL HHIR=SumREV SumQTY SumREV*SumQTY;
+	MEANS SumREV SumQTY SumREV*SumQTY;
+RUN;
+
+PROC SQL;
+  	CREATE TABLE ANOVA2 AS
+  	SELECT
+  		sum(net_revenue) as SumREV,
+  		sum(shipment_qty) as SumQTY,
+  		CASE	
+  			WHEN HouseholdIncomeRange = '1-27,999' THEN 1
+  			WHEN HouseholdIncomeRange = '28,000-31,999' THEN 2
+  			WHEN HouseholdIncomeRange = '32,000-34,999' THEN 3
+  			WHEN HouseholdIncomeRange = '35,000-36,999' THEN 4
+  			WHEN HouseholdIncomeRange = '37,000-38,999' THEN 5
+  			WHEN HouseholdIncomeRange = '39,000-40,999' THEN 6
+  			WHEN HouseholdIncomeRange = '41,000-42,999' THEN 7
+  			WHEN HouseholdIncomeRange = '43,000-44,999' THEN 8
+  			WHEN HouseholdIncomeRange = '45,000-47,999' THEN 9
+  			WHEN HouseholdIncomeRange = '48,000-51,999' THEN 10
+  			WHEN HouseholdIncomeRange = '52,000-54,999' THEN 11
+  			WHEN HouseholdIncomeRange = '55,000-59,999' THEN 12
+  			WHEN HouseholdIncomeRange = '60,000-64,999' THEN 13
+  			WHEN HouseholdIncomeRange = '65,000-69,999' THEN 14
+  			WHEN HouseholdIncomeRange = '70,000-80,999' THEN 15
+  			WHEN HouseholdIncomeRange = '81,000-93,999' THEN 16
+  			WHEN HouseholdIncomeRange = '94,000 Plus' THEN 17
+  			ELSE -1
+  		END as HHIR
+  	FROM WORK.IMPORT
+  	WHERE division = 'Library Solution'
+	GROUP BY HouseholdIncomeRange;
+
+TITLE1 'Two-Way ANOVA Test';
+TITLE2 'Library Solutions Consumer Segmentation';
+PROC GLM DATA=ANOVA2;
+CLASS SumREV SumQTY;
+	MODEL HHIR=SumREV SumQTY SumREV*SumQTY;
+	MEANS SumREV SumQTY SumREV*SumQTY;
+RUN;
